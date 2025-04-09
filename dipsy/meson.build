@@ -7,6 +7,7 @@ python_sources = [
   'dipsy_functions.py',
   'tracks.py',
   'utils.py',
+  'distributions.py'
   ]
 py3.install_sources(python_sources, subdir: py_subdir)
 

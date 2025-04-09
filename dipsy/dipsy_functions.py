@@ -9,6 +9,8 @@ from dustpylib.radtrans.slab.slab import I_over_B_EB, bplanck
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from collections import namedtuple
+import dustpy.constants as c
+import astropy.constants as ac
 
 from .cgs_constants import year, jy_sas, c_light, pc
 from .utils import bplanck
@@ -19,6 +21,9 @@ observables = namedtuple(
     'observables', ['rf', 'flux_t', 'tau', 'I_nu', 'a', 'sig_da'])
 dustpy_result = namedtuple('dustpy_result', [
                            'r', 'a_max', 'a', 'a_mean', 'sig_d', 'sig_da', 'sig_g', 'time', 'T'])
+tripod_result = namedtuple('tripod_result', [
+                           'r', 'a_max', 'a', 'a_mean', 'sig_d','q', 'sig_g', 'time', 'T', 'L_star'])
+
 rosotti_result = namedtuple('rosotti_result', [
                             'a_max', 'time', 'T', 'sig_d', 'sig_g', 'd2g', 'r', 'L_star', 'M_star', 'T_star'])
 
@@ -281,11 +286,134 @@ def read_dustpy_data(data_path, time=None):
 
     return dp
 
+def read_tripod_data(data_path, time=None, prefix = ""):
+    """
+    Read the dustpy files from the directory data_path, then interpolate the
+    densities at the given time snapshots (or take the original time if None is
+    passed).
+
+    Arguments:
+    ----------
+
+    data_path : str
+        path to the output directory where the hdf5 files are
+
+    time : array | None
+        if not None: interpolate at those times
+
+    Output:
+    -------
+    returns dict with these keys:
+    - r
+    - a_max
+    - sig_d
+    - sig_g
+    - time
+    """
+    import tripod
+    import dustpy
+    from scipy.interpolate import interp2d
+
+    reader = dustpy.hdf5writer()
+    reader.datadir = str(data_path)
+
+    time_dp = reader.read.sequence(prefix+"t")
+
+    # Read the radial and mass grid
+    r = reader.read.sequence(prefix+"grid/r")[0]
+    # rInt = reader.read.sequence("grid/rInt")
+    # m = reader.read.sequence("grid/m")
+
+    # Read the gas and dust densities
+    sig_g = reader.read.sequence(prefix+"gas/Sigma")
+    sig_da = reader.read.sequence(prefix+"dust/Sigma")
+    sig_d = sig_da.sum(-1)
+
+    # Read the stokes number and dust size
+    # St = reader.read.sequence("dust/St")
+    a = reader.read.sequence(prefix+"dust/a")
+    q = reader.read.sequence(prefix+"dust/qrec")
+
+    # Read the star mass and radius
+    # M_star = reader.read.sequence("star/M", files]
+    # R_star = reader.read.sequence("star/R", files]
+    L_star = reader.read.sequence(prefix+"star/L")
+
+    # Obtain the dust to gas ratio
+    # d2g = sig_d / sig_g
+
+    # Read the Gas and Dust scale height
+    # Hg = reader.read.sequence("gas/Hp")
+    # Hd = reader.read.sequence("dust/h")
+
+    # Read the gas (viscous) and dust velocities
+    # Vel_g = reader.read.sequence("gas/v/visc")
+    Vel_d = reader.read.sequence(prefix+"dust/v/rad")
+
+    # Read the alpha parameter and the orbital angular velocity
+    # Alpha  = reader.read.sequence("gas/alpha")
+    # OmegaK = reader.read.sequence("grid/OmegaK")
+
+    # Read the gas midplane density, sound speed, and eta parameter
+    # rho = reader.read.sequence("gas/rho")
+    # cs = reader.read.sequence("gas/cs")
+    # eta = reader.read.sequence("gas/eta")
+
+    T = reader.read.sequence(prefix+"gas/T")
+
+    # Obtain the Accretion Rate of dust and gas
+    # Acc_g = 2 * np.pi * r * Vel_g * sig_g
+    # Acc_d = 2 * np.pi * r * (Vel_d * sig_d).sum(-1)
+
+    # Obtain the alpha-viscosity
+    # Visc =  Alpha * cs * cs / OmegaK
+
+    a_mean = reader.read.sequence(prefix+"dust/a")[:,:,2]
+    
+    a_max = reader.read.sequence(prefix+"dust/s/max")
+
+    if time is None:
+        time = time_dp
+    else:
+        f_Td = interp2d(np.log10(r), np.log10(time_dp + 1e-100), np.log10(T))
+        f_sd = interp2d(np.log10(r), np.log10(
+            time_dp + 1e-100), np.log10(sig_d))
+        f_sg = interp2d(np.log10(r), np.log10(
+            time_dp + 1e-100), np.log10(sig_g))
+        f_ax = interp2d(np.log10(r), np.log10(
+            time_dp + 1e-100), np.log10(a_max))
+        f_am = interp2d(np.log10(r), np.log10(
+            time_dp + 1e-100), np.log10(a_mean))
+        f_q = interp2d(np.log10(r), np.log10(
+            time_dp + 1e-100), np.log10(q))
+        f_Lstar = interp2d(np.log10(r), np.log10(
+            time_dp + 1e-100), np.log10(L_star))
+
+        T = 10.**f_Td(np.log10(r), np.log10(time + 1e-100))
+        sig_d = 10.**f_sd(np.log10(r), np.log10(time + 1e-100))
+        sig_g = 10.**f_sg(np.log10(r), np.log10(time + 1e-100))
+        a_max = 10.**f_ax(np.log10(r), np.log10(time + 1e-100))
+        a_mean = 10.**f_am(np.log10(r), np.log10(time + 1e-100))
+        q = 10.**f_q(np.log10(r), np.log10(time + 1e-100))
+        L_star = 10.**f_Lstar(np.log10(r), np.log10(time + 1e-100))
+
+        sig_da_new = np.zeros([len(time), len(r), len(a)])
+        for ia in range(len(a)):
+            f = interp2d(np.log10(r), np.log10(time_dp + 1e-100),
+                         np.log10(sig_da[:, :, ia]))
+            sig_da_new[:, :, ia] = 10.**f(np.log10(r), np.log10(time + 1e-100))
+
+        sig_da = sig_da_new
+
+    dp = tripod_result(r, a_max, a, a_mean, sig_d, q, sig_g, time, T,L_star)
+
+    return dp
+
 
 def get_observables(r, sig_g, sig_d, a_max, T, opacity, lam, distance=140 * pc,
-                    flux_fraction=0.68, a=None, q=3.5, na=50, a0=None, a1=None, scattering=True,
+                    flux_fraction=0.68, a=None, q=3.5, na=50, a0=None, a1=None,L_star=ac.L_sun.cgs.value,mu=2.3*c.m_p, scattering=True,
                     inc=0.0):
-    """
+    """ac.L_sun.cgs.value
     Calculates the radial profiles of the (vertical) optical depth and the intensity for a given simulation
     at a given time (using the closest simulation snapshot).
 
@@ -430,17 +558,24 @@ def get_observables(r, sig_g, sig_d, a_max, T, opacity, lam, distance=140 * pc,
 
     I_nu = I_nu / jy_sas
 
-    # interpolate radius whithin which >=68% of the dust mass is
+    # interpolate radius whithin which >=68% of the dust flux is
 
     rf = np.array([np.interp(flux_fraction, _f / _f[-1], r) for _f in flux])
-
+    # calculate the gas mass from the surface denity and radial grid 
+    Area = np.pi * (r[1:]**2 - r[:-1]**2)
+    M_gas = (sig_g[:-1] * Area).sum()
+    # TODO implement the gas radius 
+    n_gas_crit = 10**(21.27-0.53*np.log10(L_star))*(M_gas/c.M_sun)**(0.3-0.08*np.log10(L_star))
+    sig_gas_crit = 10*mu*n_gas_crit 
+    r_gas = np.interp(sig_gas_crit, sig_g, r)
     return SimpleNamespace(
         rf=rf,
         flux_t=flux_t,
         tau=tau,
         I_nu=I_nu,
         a=a,
-        sig_da=sig_da)
+        sig_da=sig_da,
+        r_CO = r_gas)
 
 
 def get_all_observables(d, opac, lam, amax=True, q=3.5, flux_fraction=0.68, scattering=True, inc=0.0):
@@ -491,6 +626,7 @@ def get_all_observables(d, opac, lam, amax=True, q=3.5, flux_fraction=0.68, scat
     I_nu = []
     a = []
     sig_da = []
+    r_CO = []
 
     q_f, q_d = q * np.ones(2)
 
@@ -504,17 +640,32 @@ def get_all_observables(d, opac, lam, amax=True, q=3.5, flux_fraction=0.68, scat
     for it in range(len(d.time)):
 
         # assign the correct q
-
-        q_array = np.where(d.a_max[it, :] > np.minimum(
+        if hasattr(d, 'q'):
+            q_array = -d.q[it,:]
+        else:
+            q_array = np.where(d.a_max[it, :] > np.minimum(
             d.a_fr[it, :], d.a_df[it, :]), q_f, q_d)
+
+        if hasattr(d, "L_star"):
+            L_star = d.L_star[it]
+        else:
+            L_star = 1.0 * ac.L_sun.cgs.value
+        if hasattr(d, "mu"):
+            mu = d.mu[it]
+        else:
+            mu = 2.3 * c.m_p
+
+        
         obs = get_observables(d.r, d.sig_g[it, :], sig_d[it], d.a_max[it, :], d.T[it, :], opac, lam,
-                              q=q_array, a=_a, flux_fraction=flux_fraction, scattering=scattering, inc=inc)
+                              q=q_array, a=_a, flux_fraction=flux_fraction,L_star=L_star,mu=mu ,scattering=scattering, inc=inc)
         rf += [obs.rf]
         flux += [obs.flux_t]
         tau += [obs.tau]
         I_nu += [obs.I_nu]
         a += [obs.a]
         sig_da += [obs.sig_da]
+        r_CO += [obs.r_CO]
+
 
     rf = np.array(rf)
     flux = np.array(flux)
@@ -522,12 +673,15 @@ def get_all_observables(d, opac, lam, amax=True, q=3.5, flux_fraction=0.68, scat
     I_nu = np.array(I_nu)
     a = np.array(a)
     sig_da = np.array(sig_da)
+    r_CO = np.array(r_CO)
 
     return SimpleNamespace(
+        t = d.time,
         rf=rf,
         flux=flux,
         tau=tau,
         I_nu=I_nu,
         a=a,
         sig_da=sig_da,
+        r_CO=r_CO
     )

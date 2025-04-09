@@ -1,6 +1,7 @@
 from importlib import metadata as _md
 from . import data
 from . import utils
+from . import distributions 
 from . import cgs_constants
 from .tracks import get_stellar_properties
 from dustpylib.radtrans.slab.slab import Opacity
