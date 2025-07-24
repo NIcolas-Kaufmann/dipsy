@@ -109,7 +109,7 @@ def disk_delussu(n,size = 8,random_seed = 42):
     disk  = SimpleNamespace()
     disk.alpha = log_uniform_sample(rand[0], 1e-4,1e-2)
     disk.mstar = kroupa_imf_sample(rand[1],m_min=0.2,m_max=2.)*c.M_sun
-    disk.mdisk = map_uniform_to_interval(rand[2],1e-3,0.5) * disk.mstar
+    disk.mdisk = log_uniform_sample(rand[2],1e-3,0.5) * disk.mstar
     disk.rc = log_uniform_sample(rand[3], 10, 230) * c.au
     disk.vfrag = map_uniform_to_interval(rand[4], 200, 2000)
     disk.rp = map_uniform_to_interval(rand[5],0.05,1.5)*disk.rc
@@ -118,5 +118,56 @@ def disk_delussu(n,size = 8,random_seed = 42):
     disk.d2g = 1e-2 
     disk.rhos = 1.7 
     disk.gamma = 1 
+    # Emsenhuber 2023 Table 6
+    disk.Lx = 10** np.random.normal(loc=0.31, scale=0.54, size=1)[0] * (disk.mstar/c.M_sun)**1.52 * 1e30 # erg/s
+    disk.Feux = 10 ** np.random.normal(loc=3.25, scale=0.93, size=1)[0]  #G0
+    return disk
 
+
+def disk_v2(n,size = 8,random_seed = 42):
+
+    np.random.seed(random_seed)
+    for _ in range(n):  
+        np.random.rand(size)
+    rand = np.random.rand(size)
+
+    disk  = SimpleNamespace()
+    disk.alpha = log_uniform_sample(rand[0], 1e-4,1e-2)
+    disk.mstar = kroupa_imf_sample(rand[1],m_min=0.2,m_max=2.)*c.M_sun
+    disk.mdisk = log_uniform_sample(rand[2],1e-3,0.5) * disk.mstar
+    disk.rc = log_uniform_sample(rand[3], 10, 230) * c.au
+    disk.vfrag = map_uniform_to_interval(rand[4], 200, 2000)
+    disk.rp = max(4*c.au, map_uniform_to_interval(rand[5],0.05,1.5)*disk.rc) # ensure rp is at least 4 au
+    disk.mp = min(map_uniform_to_interval(rand[6],1,1050)*c.M_earth,disk.mdisk)
+    disk.tp = map_uniform_to_interval(rand[7],0.1,0.4)*1e6*c.year
+    disk.d2g = 1e-2 
+    disk.rhos = 1.7 
+    disk.gamma = 1 
+    # Emsenhuber 2023 Table 6
+    disk.Lx = 10** np.random.normal(loc=0.31, scale=0.54, size=1)[0] * (disk.mstar/c.M_sun)**1.52 * 1e30 # erg/s
+    disk.Feux = 10 ** max(-1, np.random.normal(loc=1, scale=0.5, size=1)[0])  #G0 Weder 
+    return disk
+
+def disk_v3(n,size = 8,random_seed = 42):
+
+    np.random.seed(random_seed)
+    for _ in range(n):  
+        np.random.rand(size)
+    rand = np.random.rand(size)
+
+    disk  = SimpleNamespace()
+    disk.alpha = log_uniform_sample(rand[0], 10**-3.5,10**-2.5)
+    disk.mstar = kroupa_imf_sample(rand[1],m_min=0.2,m_max=2.)*c.M_sun
+    disk.mdisk = log_uniform_sample(rand[2],10**-2.3,10**-0.5) * disk.mstar
+    disk.rc = log_uniform_sample(rand[3], 10, 230) * c.au
+    disk.vfrag = map_uniform_to_interval(rand[4], 500, 2000)
+    disk.rp = max(4*c.au, map_uniform_to_interval(rand[5],0.05,0.75)*disk.rc) # ensure rp is at least 4 au
+    disk.mp = min(map_uniform_to_interval(rand[6],150,1050)*c.M_earth,disk.mdisk)
+    disk.tp = map_uniform_to_interval(rand[7],0.1,0.4)*1e6*c.year
+    disk.d2g = 1e-2 
+    disk.rhos = 1.7 
+    disk.gamma = 1 
+    # Emsenhuber 2023 Table 6
+    disk.Lx = 10** np.random.normal(loc=0.31, scale=0.54, size=1)[0] * (disk.mstar/c.M_sun)**1.52 * 1e30 # erg/s
+    disk.Feux = 10 ** max(-1, np.random.normal(loc=1, scale=0.5, size=1)[0])  #G0 Weder 
     return disk

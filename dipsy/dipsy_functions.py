@@ -12,6 +12,7 @@ from collections import namedtuple
 import dustpy.constants as c
 import astropy.constants as ac
 
+from dipsy.tracks import M_sun
 from .cgs_constants import year, jy_sas, c_light, pc
 from .utils import bplanck
 
@@ -22,7 +23,7 @@ observables = namedtuple(
 dustpy_result = namedtuple('dustpy_result', [
                            'r', 'a_max', 'a', 'a_mean', 'sig_d', 'sig_da', 'sig_g', 'time', 'T'])
 tripod_result = namedtuple('tripod_result', [
-                           'r', 'a_max', 'a', 'a_mean', 'sig_d','q', 'sig_g', 'time', 'T', 'L_star'])
+                           'r', 'a_max', 'a', 'a_mean', 'sig_d','q', 'sig_g', 'time', 'T', 'L_star',"M_disk"])
 
 rosotti_result = namedtuple('rosotti_result', [
                             'a_max', 'time', 'T', 'sig_d', 'sig_g', 'd2g', 'r', 'L_star', 'M_star', 'T_star'])
@@ -324,11 +325,12 @@ def read_tripod_data(data_path, time=None, prefix = ""):
     # rInt = reader.read.sequence("grid/rInt")
     # m = reader.read.sequence("grid/m")
 
+    A = reader.read.sequence(prefix+"grid/A")
     # Read the gas and dust densities
     sig_g = reader.read.sequence(prefix+"gas/Sigma")
     sig_da = reader.read.sequence(prefix+"dust/Sigma")
     sig_d = sig_da.sum(-1)
-
+    M_disk = (sig_g * A).sum(-1)
     # Read the stokes number and dust size
     # St = reader.read.sequence("dust/St")
     a = reader.read.sequence(prefix+"dust/a")
@@ -405,7 +407,7 @@ def read_tripod_data(data_path, time=None, prefix = ""):
 
         sig_da = sig_da_new
 
-    dp = tripod_result(r, a_max, a, a_mean, sig_d, q, sig_g, time, T,L_star)
+    dp = tripod_result(r, a_max, a, a_mean, sig_d, q, sig_g, time, T,L_star,M_disk)
 
     return dp
 
@@ -565,9 +567,14 @@ def get_observables(r, sig_g, sig_d, a_max, T, opacity, lam, distance=140 * pc,
     Area = np.pi * (r[1:]**2 - r[:-1]**2)
     M_gas = (sig_g[:-1] * Area).sum()
     # TODO implement the gas radius 
-    n_gas_crit = 10**(21.27-0.53*np.log10(L_star))*(M_gas/c.M_sun)**(0.3-0.08*np.log10(L_star))
-    sig_gas_crit = 10*mu*n_gas_crit 
-    r_gas = np.interp(sig_gas_crit, sig_g, r)
+    n_gas_crit = 10**(21.27-0.53*np.log10(L_star/ac.L_sun.cgs.value))*(M_gas/c.M_sun)**(0.3-0.08*np.log10(L_star/ac.L_sun.cgs.value))
+    sig_gas_crit = 10*mu*n_gas_crit
+
+    for i in range(len(r) - 1, 0, -1):
+        if sig_g[i] > sig_gas_crit:
+            break
+    r_gas = r[i]
+    
     return SimpleNamespace(
         rf=rf,
         flux_t=flux_t,
@@ -582,7 +589,7 @@ def get_all_observables(d, opac, lam, amax=True, q=3.5, flux_fraction=0.68, scat
     """Calculate the radius and total flux for all snapshots of a simulation
 
     Arguments:
-    ----------
+    ---------- 
 
     d : namedtuple
         the output of read_dustpy_data, read_rosotti_data, or run_bump_model
@@ -627,6 +634,7 @@ def get_all_observables(d, opac, lam, amax=True, q=3.5, flux_fraction=0.68, scat
     a = []
     sig_da = []
     r_CO = []
+    t_disk = -1 # default value, will be overwritten if available
 
     q_f, q_d = q * np.ones(2)
 
@@ -638,7 +646,9 @@ def get_all_observables(d, opac, lam, amax=True, q=3.5, flux_fraction=0.68, scat
         sig_d = d.sig_d
 
     for it in range(len(d.time)):
-
+        
+        if t_disk == -1 and d.M_disk[it] < 1e-6*c.M_sun:
+            t_disk = d.time[it]
         # assign the correct q
         if hasattr(d, 'q'):
             q_array = -d.q[it,:]
@@ -683,5 +693,6 @@ def get_all_observables(d, opac, lam, amax=True, q=3.5, flux_fraction=0.68, scat
         I_nu=I_nu,
         a=a,
         sig_da=sig_da,
-        r_CO=r_CO
+        r_CO=r_CO,
+        t_disk = t_disk 
     )
