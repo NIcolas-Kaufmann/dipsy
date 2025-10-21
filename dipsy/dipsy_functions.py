@@ -21,7 +21,7 @@ import dsharp_opac
 observables = namedtuple(
     'observables', ['rf', 'flux_t', 'tau', 'I_nu', 'a', 'sig_da'])
 dustpy_result = namedtuple('dustpy_result', [
-                           'r', 'a_max', 'a', 'a_mean', 'sig_d', 'sig_da', 'sig_g', 'time', 'T'])
+                           'r', 'a_max', 'a', 'a_mean', 'sig_d', 'sig_da', 'sig_g', 'time',"T", 'L_star',"M_disk"])
 tripod_result = namedtuple('tripod_result', [
                            'r', 'a_max', 'a', 'a_mean', 'sig_d','q', 'sig_g', 'time', 'T', 'L_star',"M_disk"])
 
@@ -173,7 +173,7 @@ def read_rosotti_data(fname):
         return rosotti_result(amax, age, T, sig_d, sig_g, d2g, r, L_star, M_star, T_star)
 
 
-def read_dustpy_data(data_path, time=None):
+def read_dustpy_data(data_path, time=None, amin=5e-10):
     """
     Read the dustpy files from the directory data_path, then interpolate the
     densities at the given time snapshots (or take the original time if None is
@@ -214,14 +214,21 @@ def read_dustpy_data(data_path, time=None):
     sig_g = reader.read.sequence("gas/Sigma")
     sig_da = reader.read.sequence("dust/Sigma")
     sig_d = sig_da.sum(-1)
+    A = reader.read.sequence("grid/A")
+    M_disk = (sig_g * A).sum(-1)
 
     # Read the stokes number and dust size
     # St = reader.read.sequence("dust/St")
     a = reader.read.sequence("dust/a")[0, 0, :]
 
+    i_min = np.argmin(np.abs(a - amin))
+    sig_da=sig_da[:,:,i_min:]
+
+
     # Read the star mass and radius
     # M_star = reader.read.sequence("star/M", files]
     # R_star = reader.read.sequence("star/R", files]
+    L_star = reader.read.sequence("star/L")
 
     # Obtain the dust to gas ratio
     # d2g = sig_d / sig_g
@@ -252,9 +259,10 @@ def read_dustpy_data(data_path, time=None):
     # Obtain the alpha-viscosity
     # Visc =  Alpha * cs * cs / OmegaK
 
-    a_mean = (a * sig_da * np.abs(Vel_d)).sum(-1) / \
-        (sig_da * np.abs(Vel_d)).sum(-1)
+    a_mean = (a[i_min:] * sig_da * np.abs(Vel_d[:,:,i_min:])).sum(-1) / \
+        (sig_da * np.abs(Vel_d[:,:,i_min:])).sum(-1)
     a_max = a[sig_da.argmax(-1)]
+    a = a[i_min:]
 
     if time is None:
         time = time_dp
@@ -268,12 +276,15 @@ def read_dustpy_data(data_path, time=None):
             time_dp + 1e-100), np.log10(a_max))
         f_am = interp2d(np.log10(r), np.log10(
             time_dp + 1e-100), np.log10(a_mean))
+        f_Lstar = interp2d(np.log10(r), np.log10(
+            time_dp + 1e-100), np.log10(L_star))
 
         T = 10.**f_Td(np.log10(r), np.log10(time + 1e-100))
         sig_d = 10.**f_sd(np.log10(r), np.log10(time + 1e-100))
         sig_g = 10.**f_sg(np.log10(r), np.log10(time + 1e-100))
         a_max = 10.**f_ax(np.log10(r), np.log10(time + 1e-100))
         a_mean = 10.**f_am(np.log10(r), np.log10(time + 1e-100))
+        L_star = 10.**f_Lstar(np.log10(r), np.log10(time + 1e-100))
 
         sig_da_new = np.zeros([len(time), len(r), len(a)])
         for ia in range(len(a)):
@@ -283,7 +294,7 @@ def read_dustpy_data(data_path, time=None):
 
         sig_da = sig_da_new
 
-    dp = dustpy_result(r, a_max, a, a_mean, sig_d, sig_da, sig_g, time, T)
+    dp = dustpy_result(r, a_max, a, a_mean, sig_d, sig_da, sig_g, time, T,L_star,M_disk)
 
     return dp
 
@@ -650,11 +661,14 @@ def get_all_observables(d, opac, lam, amax=True, q=3.5, flux_fraction=0.68, scat
         if t_disk == -1 and d.M_disk[it] < 1e-6*c.M_sun:
             t_disk = d.time[it]
         # assign the correct q
-        if hasattr(d, 'q'):
-            q_array = -d.q[it,:]
+        if amax is True:
+            if hasattr(d, 'q'):
+                q_array = -d.q[it,:]
+            else:
+                q_array = np.where(d.a_max[it, :] > np.minimum(
+                d.a_fr[it, :], d.a_df[it, :]), q_f, q_d)
         else:
-            q_array = np.where(d.a_max[it, :] > np.minimum(
-            d.a_fr[it, :], d.a_df[it, :]), q_f, q_d)
+            q_array = -3.5* np.ones(len(d.r))
 
         if hasattr(d, "L_star"):
             L_star = d.L_star[it]

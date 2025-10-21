@@ -64,9 +64,11 @@ def kroupa_imf_sample(random_uniform, m_min=0.01, m_max=150):
     cdf1 = cdf0 + cdf(m2, alpha1, k1, m1)
     cdf2 = cdf1 + cdf(m3, alpha2, k2, m2)
     cdf3 = cdf2 + cdf(m_max, alpha3, k3, m3)
+
     
     # Inverse transform sampling
     u = random_uniform*cdf3
+
     
 
     if u < cdf0:
@@ -157,11 +159,41 @@ def disk_v3(n,size = 8,random_seed = 42):
 
     disk  = SimpleNamespace()
     disk.alpha = log_uniform_sample(rand[0], 10**-3.5,10**-2.5)
-    disk.mstar = kroupa_imf_sample(rand[1],m_min=0.2,m_max=2.)*c.M_sun
+    disk.mstar = kroupa_imf_sample(rand[1],m_max=2.)*c.M_sun
+    while disk.mstar < 0.2*c.M_sun:
+        disk.mstar = kroupa_imf_sample(np.random.rand(),m_max=2.)*c.M_sun
     disk.mdisk = log_uniform_sample(rand[2],10**-2.3,10**-0.5) * disk.mstar
     disk.rc = log_uniform_sample(rand[3], 10, 230) * c.au
     disk.vfrag = map_uniform_to_interval(rand[4], 500, 2000)
     disk.rp = max(4*c.au, map_uniform_to_interval(rand[5],0.05,0.75)*disk.rc) # ensure rp is at least 4 au
+    disk.mp = min(map_uniform_to_interval(rand[6],150,1050)*c.M_earth,disk.mdisk)
+    disk.tp = map_uniform_to_interval(rand[7],0.1,0.4)*1e6*c.year
+    disk.d2g = 1e-2 
+    disk.rhos = 1.7 
+    disk.gamma = 1 
+    # Emsenhuber 2023 Table 6
+    disk.Lx = 10** np.random.normal(loc=0.31, scale=0.54, size=1)[0] * (disk.mstar/c.M_sun)**1.52 * 1e30 # erg/s
+    disk.Feux = 10 ** max(-1, np.random.normal(loc=1, scale=0.5, size=1)[0])  #G0 Weder 
+    return disk
+
+
+
+def disk_extended(n,size = 8,random_seed = 42):
+
+    np.random.seed(random_seed)
+    for _ in range(n):  
+        np.random.rand(size)
+    rand = np.random.rand(size)
+
+    disk  = SimpleNamespace()
+    disk.alpha = log_uniform_sample(rand[0], 10**-4,10**-2)
+    disk.mstar = kroupa_imf_sample(rand[1],m_max=2.)*c.M_sun
+    while disk.mstar < 0.2*c.M_sun:
+        disk.mstar = kroupa_imf_sample(np.random.rand(),m_max=2.)*c.M_sun
+    disk.mdisk = log_uniform_sample(rand[2],10**-2.3,10**-0.5) * disk.mstar
+    disk.rc = log_uniform_sample(rand[3], 10, 230) * c.au
+    disk.vfrag = map_uniform_to_interval(rand[4], 50, 2000)
+    disk.rp = max(4*c.au, map_uniform_to_interval(rand[5],0.05,1.5)*disk.rc) # ensure rp is at least 4 au
     disk.mp = min(map_uniform_to_interval(rand[6],150,1050)*c.M_earth,disk.mdisk)
     disk.tp = map_uniform_to_interval(rand[7],0.1,0.4)*1e6*c.year
     disk.d2g = 1e-2 

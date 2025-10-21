@@ -59,6 +59,7 @@ def get_stellar_properties(m, t, z='01', track_dir=None):
     if i_left == len(masses) - 1:
         i_left -= 1
 
+    print(masses,i_left )
     props_left = track(m=f'{masses[i_left]:.1f}', z=z, track_dir=track_dir).get_stellar_params(t)
     props_right = track(m=f'{masses[i_left + 1]:.1f}', z=z, track_dir=track_dir).get_stellar_params(t)
 
@@ -151,7 +152,7 @@ class track(object):
         if not folder.is_dir():
             raise FileNotFoundError(f'folder {folder_name} does not exist')
 
-        return sorted([rtype(f.name.split('z')[0][1:]) for f in folder.glob('m*z*')])
+        return sorted([rtype(f.name.split('z')[0][1:]) for f in folder.glob('m*z*.hrd')])
 
     def __init__(self, m='0.5', z='01', track_dir=None):
 
