@@ -322,7 +322,6 @@ def read_tripod_data(data_path, time=None, prefix = ""):
     - sig_g
     - time
     """
-    import tripod
     import dustpy
     from scipy.interpolate import interp2d
 
@@ -503,7 +502,7 @@ def get_observables(r, sig_g, sig_d, a_max, T, opacity, lam, distance=140 * pc,
     sig_da, : array
         reconstructed particle size distribution on grid (res.a, res.x)
     """
-    from scipy.integrate import cumtrapz
+    from scipy.integrate import cumulative_trapezoid
 
     # get the size distribution
     if (a is not None and sig_d.ndim != 2) or (a is None and sig_d.ndim != 1):
@@ -563,7 +562,7 @@ def get_observables(r, sig_g, sig_d, a_max, T, opacity, lam, distance=140 * pc,
     # calculate the fluxes
 
     flux = np.cos(inc) * distance**-2 * \
-        cumtrapz(2 * np.pi * r * I_nu, x=r, axis=1, initial=0)
+        cumulative_trapezoid(2 * np.pi * r * I_nu, x=r, axis=1, initial=0)
     # integrated flux density in Jy (sanity check: TW Hya @ 870 micron and 54 parsec is about 1.5 Jy)
     flux_t = flux[:, -1] / 1e-23
 
