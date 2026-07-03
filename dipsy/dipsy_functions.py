@@ -15,6 +15,8 @@ import astropy.constants as ac
 from dipsy.tracks import M_sun
 from .cgs_constants import year, jy_sas, c_light, pc
 from .utils import bplanck
+import pandas as pd
+import re
 
 import dsharp_opac
 
@@ -172,6 +174,131 @@ def read_rosotti_data(fname):
 
         return rosotti_result(amax, age, T, sig_d, sig_g, d2g, r, L_star, M_star, T_star)
 
+def read_tazzari_data(fname=None):
+    if fname is None:
+        fname = Path(__file__).parent / "datasets/Tazzari2021.txt"
+    with open(fname, 'r') as f:
+        lines = f.readlines()
+    
+    # Get column names from header (line 8)
+    header_line = lines[8].strip()
+    columns = [col.strip() for col in header_line.split('|') if col.strip()]
+    
+    # Parse data starting from line 12
+    data = []
+    for line in lines[12:]:
+        if line.strip():
+            name = line[0:25].strip()  # First 25 chars
+            rest = line[25:].strip().split()
+            
+            # Find where numbers start
+            numeric_start = 0
+            for i, part in enumerate(rest):
+                try:
+                    float(part)
+                    numeric_start = i
+                    break
+                except:
+                    continue
+            
+            other_name = ' '.join(rest[:numeric_start]) if numeric_start > 0 else ''
+            numeric_vals = rest[numeric_start:numeric_start + 10]
+            
+            if len(numeric_vals) == 10:
+                data.append([name, other_name] + numeric_vals)
+    
+    df = pd.DataFrame(data, columns=columns)
+    for col in df.columns[2:]:
+        df[col] = pd.to_numeric(df[col])
+    
+    return df
+
+
+def read_feng_data(fname=None):
+    if fname is None:
+        fname = Path(__file__).parent / "datasets/feng_22.csv"
+    with open(fname, 'r') as f:
+        lines = f.readlines()
+
+    # File is tab-separated. The header row is missing one label because two
+    # columns share the "Continuum"/"CO" group header in the original table,
+    # so we name columns manually based on the data pattern (col 9, "R_mm",
+    # is the one uncertain label - rename if you can confirm it from the paper).
+    columns = [
+        'Idx', 'Name', 'Incl', 'PA',
+        'Continuum_freq_GHz', 'Continuum_flux_mJy',
+        'CO_val', 'Line', 'R_mm_arcsec',
+        'CO_flux_mJy', 'R_CO_over_R_mm', 'References'
+    ]
+
+    data = []
+    for line in lines[1:]:
+        if line.strip():
+            parts = [p.strip() for p in line.rstrip('\n').split('\t')]
+            parts = [p for p in parts if p != '' or len(parts) <= len(columns)]
+            parts = parts[:len(columns)]
+            if len(parts) == len(columns):
+                data.append(parts)
+
+    df = pd.DataFrame(data, columns=columns)
+
+    # Split "value +or- error" style columns into separate value/err columns
+    for col in ['CO_val', 'CO_flux_mJy', 'R_CO_over_R_mm']:
+        split = df[col].str.split(r'\+or-', expand=True)
+        df[col + '_err'] = pd.to_numeric(split[1].str.strip(), errors='coerce')
+        df[col] = pd.to_numeric(split[0].str.strip(), errors='coerce')
+
+    # Numeric conversion for the remaining plain numeric columns
+    for col in ['Idx', 'Incl', 'PA', 'Continuum_freq_GHz',
+                'Continuum_flux_mJy', 'R_mm_arcsec']:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    return df
+
+def read_andrews_data(fname=None):
+    if fname is None:
+        fname = Path(__file__).parent / "datasets/ALLDISKS.summary.dat"
+
+    # File is whitespace-separated with no header; astropy's ascii.read
+    # names columns col1..colN (1-indexed), so we replicate that here.
+    dat = pd.read_csv(fname, sep=r'\s+', header=None)
+    dat.columns = [f'col{i+1}' for i in range(dat.shape[1])]
+    ndisks = len(dat)
+
+    xx = dat['col30'].to_numpy()
+    xh = dat['col31'].to_numpy()
+    xl = dat['col32'].to_numpy()
+    y_f = dat['col36'].to_numpy()
+
+    mstar = 10.**dat['col17'].to_numpy()
+
+    yy = np.zeros(ndisks)
+    yy[y_f == 0] = dat['col33'].to_numpy()[y_f == 0]
+    yy[y_f == 1] = dat['col37'].to_numpy()[y_f == 1]
+
+    yh = dat['col34'].to_numpy()
+    yl = dat['col35'].to_numpy()
+
+    cond = y_f == 0
+
+    df = pd.DataFrame({
+        'R_eff':   10.**yy[cond],
+        'R_eff_l': (10.**yy - 10.**(yy - yl))[cond],
+        'R_eff_h': (10.**(yy + yh) - 10.**yy)[cond],
+        'L_mm':    10.**xx[cond],
+        'L_mm_l':  (10.**xx - 10.**(xx - xl))[cond],
+        'L_mm_h':  (10.**(xx + xh) - 10.**xx)[cond],
+        'Mstar':   mstar[cond],
+    })
+
+    return df
+
+def read_bito_data(fname = None):
+    if fname is None:
+        fname = Path(__file__).parent / "datasets/bito_22.csv"
+    df = pd.read_csv(fname,sep=',',comment='#')
+
+    return df 
 
 def read_dustpy_data(data_path, time=None, amin=5e-10):
     """

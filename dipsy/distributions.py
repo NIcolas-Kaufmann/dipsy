@@ -152,10 +152,8 @@ def disk_v2(n,size = 8,random_seed = 42):
 
 def disk_v3(n,size = 8,random_seed = 42):
 
-    np.random.seed(random_seed)
-    for _ in range(n):  
-        np.random.rand(size)
-    rand = np.random.rand(size)
+    rng = np.random.default_rng(np.random.SeedSequence([random_seed, n]))
+    rand = rng.random(size)
 
     disk  = SimpleNamespace()
     disk.alpha = log_uniform_sample(rand[0], 10**-3.5,10**-2.5)
