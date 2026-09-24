@@ -4,7 +4,8 @@ datafiles = files([
     'bito_22.csv',
     'ALLDISKS.summary.dat',
     'feng_22.csv',
-    'Tazzari2021.txt'
+    'Tazzari2021.txt',
+    'Tazzari2021_distances.txt'
 
 
 ])

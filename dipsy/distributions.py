@@ -174,6 +174,161 @@ def disk_v3(n,size = 8,random_seed = 42):
     disk.Feux = 10 ** max(-1, np.random.normal(loc=1, scale=0.5, size=1)[0])  #G0 Weder 
     return disk
 
+def disk_v3_fixed(n,size = 8,random_seed = 42):
+
+    rng = np.random.default_rng(np.random.SeedSequence([random_seed, n]))
+
+    disk  = SimpleNamespace()
+    disk.alpha = log_uniform_sample(rng.random(), 10**-3.5,10**-2.5)
+    disk.mstar = kroupa_imf_sample(rng.random(),m_max=2.)*c.M_sun
+    while disk.mstar < 0.2*c.M_sun:
+        disk.mstar = kroupa_imf_sample(rng.random(),m_max=2.)*c.M_sun
+    disk.mdisk = log_uniform_sample(rng.random(),10**-2.3,10**-0.5) * disk.mstar
+    disk.rc = log_uniform_sample(rng.random(), 10, 230) * c.au
+    disk.vfrag = map_uniform_to_interval(rng.random(), 500, 2000)
+    disk.rp = max(4*c.au, map_uniform_to_interval(rng.random(),0.05,0.75)*disk.rc) # ensure rp is at least 4 au
+    disk.mp = min(map_uniform_to_interval(rng.random(),150,1050)*c.M_earth,disk.mdisk)
+    disk.tp = map_uniform_to_interval(rng.random(),0.1,0.4)*1e6*c.year
+    disk.d2g = 1e-2 
+    disk.rhos = 1.7 
+    disk.gamma = 1 
+    # Emsenhuber 2023 Table 6
+    disk.Lx = 10** rng.normal(loc=0.31, scale=0.54, size=1)[0] * (disk.mstar/c.M_sun)**1.52 * 1e30 # erg/s
+    disk.Feux = 10 ** max(-1, rng.normal(loc=1, scale=0.5, size=1)[0])  #G0 Weder 
+    return disk
+
+def disk_v4_buggy(n,size = 8,random_seed = 42):
+    # changes from lucas best cuts 
+    # -> lower Feux
+    # -> lower vfrag (to solve ruaway growth problem)
+    # -> earlier substructures (to avoid too many disks with no substructure)
+    
+    rng = np.random.default_rng(np.random.SeedSequence([random_seed, n]))
+    rand = rng.random(size)
+
+    disk  = SimpleNamespace()
+    disk.alpha = log_uniform_sample(rand[0], 10**-3.5,10**-2.5)
+    disk.mstar = kroupa_imf_sample(rand[1],m_max=2.)*c.M_sun
+    while disk.mstar < 0.2*c.M_sun:
+        disk.mstar = kroupa_imf_sample(np.random.rand(),m_max=2.)*c.M_sun
+    disk.mdisk = log_uniform_sample(rand[2],10**-2.3,10**-0.5) * disk.mstar
+    disk.rc = log_uniform_sample(rand[3], 10, 230) * c.au
+    disk.vfrag = map_uniform_to_interval(rand[4], 100, 1500)
+    disk.rp = max(4*c.au, map_uniform_to_interval(rand[5],0.05,0.75)*disk.rc) # ensure rp is at least 4 au
+    disk.mp = min(map_uniform_to_interval(rand[6],150,1050)*c.M_earth,disk.mdisk)
+    disk.tp = map_uniform_to_interval(rand[7],0.01,0.1)*1e6*c.year
+    disk.d2g = 1e-2 
+    disk.rhos = 1.7 
+    disk.gamma = 1 
+    # Emsenhuber 2023 Table 6
+    disk.Lx = 10** np.random.normal(loc=0.31, scale=0.54, size=1)[0] * (disk.mstar/c.M_sun)**1.52 * 1e30 # erg/s
+    #changed Feux to be in line with anania 2025 results for taurus and lupus
+    disk.Feux = 10 ** max(-1, np.random.normal(loc=np.log10(3.5), scale=0.5, size=1)[0])  #G0 Weder 
+    return disk
+
+
+def disk_v4(n,size = 8,random_seed = 42):
+    # changes from lucas best cuts 
+    # -> lower Feux
+    # -> lower vfrag (to solve ruaway growth problem)
+    # -> earlier substructures (to avoid too many disks with no substructure)
+    
+    rng = np.random.default_rng(np.random.SeedSequence([random_seed, n]))
+    rand = rng.random(size)
+
+    disk  = SimpleNamespace()
+    disk.alpha = log_uniform_sample(rng.random(), 10**-3.5,10**-2.5)
+    disk.mstar = kroupa_imf_sample(rng.random(),m_max=2.)*c.M_sun
+    while disk.mstar < 0.2*c.M_sun:
+        disk.mstar = kroupa_imf_sample(rng.random(),m_max=2.)*c.M_sun
+    disk.mdisk = log_uniform_sample(rng.random(),10**-2.3,10**-0.5) * disk.mstar
+    disk.rc = log_uniform_sample(rng.random(), 10, 230) * c.au
+    disk.vfrag = map_uniform_to_interval(rng.random(), 100, 1500)
+    disk.rp = max(4*c.au, map_uniform_to_interval(rng.random(),0.05,0.75)*disk.rc) # ensure rp is at least 4 au
+    disk.mp = min(map_uniform_to_interval(rng.random(),150,1050)*c.M_earth,disk.mdisk)
+    disk.tp = map_uniform_to_interval(rng.random(),0.01,0.1)*1e6*c.year
+    disk.d2g = 1e-2 
+    disk.rhos = 1.7 
+    disk.gamma = 1 
+    # Emsenhuber 2023 Table 6
+    disk.Lx = 10** rng.normal(loc=0.31, scale=0.54, size=1)[0] * (disk.mstar/c.M_sun)**1.52 * 1e30 # erg/s
+    #changed Feux to be in line with anania 2025 results for taurus and lupus
+    disk.Feux = 10 ** max(-1, rng.normal(loc=np.log10(3.5), scale=0.5, size=1)[0])  #G0 Weder 
+    return disk
+
+def disk_v5(n,size = 8,random_seed = 42):
+    # changes from lucas best cuts 
+    # -> lower Feux
+    # -> lower vfrag (to solve ruaway growth problem)
+    # -> earlier substructures (to avoid too many disks with no substructure)
+
+    #changes from v4 to v5:
+    # no very small disks (rc < 20 au) to avoid disks with no substructure
+    # no verly low mass disks (mdisk < 0.01 Mstar) to avoid disks with no substructure
+    # no very high mass disks (mdisk > 0.1 Mstar) to avoid disks with no substructure
+    # now low fragmentation velocity disks (vfrag < 300 cm/s) are allowed to avoid disks with no substructure
+    # no high alpha disks ( 1e-4 < alpha < 1e-3) to avoid disks with no substructure
+    
+    rng = np.random.default_rng(np.random.SeedSequence([random_seed, n]))
+    rand = rng.random(size)
+
+    disk  = SimpleNamespace()
+    disk.alpha = log_uniform_sample(rng.random(), 10**-4.,10**-3.)
+    disk.mstar = kroupa_imf_sample(rng.random(),m_max=2.)*c.M_sun
+    while disk.mstar < 0.2*c.M_sun:
+        disk.mstar = kroupa_imf_sample(rng.random(),m_max=2.)*c.M_sun
+    disk.mdisk = log_uniform_sample(rng.random(),1.*10**-2,10**-1) * disk.mstar
+    disk.rc = log_uniform_sample(rng.random(), 20, 230) * c.au
+    disk.vfrag = map_uniform_to_interval(rng.random(), 300, 1500)
+    disk.rp = max(4*c.au, map_uniform_to_interval(rng.random(),0.05,0.75)*disk.rc) # ensure rp is at least 4 au
+    disk.mp = min(map_uniform_to_interval(rng.random(),150,1050)*c.M_earth,disk.mdisk)
+    disk.tp = map_uniform_to_interval(rng.random(),0.01,0.1)*1e6*c.year
+    disk.d2g = 1e-2 
+    disk.rhos = 1.7 
+    disk.gamma = 1 
+    # Emsenhuber 2023 Table 6
+    disk.Lx = 10** rng.normal(loc=0.31, scale=0.54, size=1)[0] * (disk.mstar/c.M_sun)**1.52 * 1e30 # erg/s
+    #changed Feux to be in line with anania 2025 results for taurus and lupus
+    disk.Feux = 10 ** max(-1, rng.normal(loc=np.log10(3.5), scale=0.5, size=1)[0])  #G0 Weder 
+    return disk
+
+
+def disk_v5_rmin(n,size = 8,random_seed = 42,r_min=1.*c.au):
+    # changes from lucas best cuts 
+    # -> lower Feux
+    # -> lower vfrag (to solve ruaway growth problem)
+    # -> earlier substructures (to avoid too many disks with no substructure)
+
+    #changes from v4 to v5:
+    # no very small disks (rc < 20 au) to avoid disks with no substructure
+    # no verly low mass disks (mdisk < 0.01 Mstar) to avoid disks with no substructure
+    # no very high mass disks (mdisk > 0.1 Mstar) to avoid disks with no substructure
+    # now low fragmentation velocity disks (vfrag < 300 cm/s) are allowed to avoid disks with no substructure
+    # no high alpha disks ( 1e-4 < alpha < 1e-3) to avoid disks with no substructure
+    
+    rng = np.random.default_rng(np.random.SeedSequence([random_seed, n]))
+    rand = rng.random(size)
+
+    disk  = SimpleNamespace()
+    disk.alpha = log_uniform_sample(rng.random(), 10**-4.,10**-3.)
+    disk.mstar = kroupa_imf_sample(rng.random(),m_max=2.)*c.M_sun
+    while disk.mstar < 0.2*c.M_sun:
+        disk.mstar = kroupa_imf_sample(rng.random(),m_max=2.)*c.M_sun
+    disk.mdisk = log_uniform_sample(rng.random(),1.*10**-2,10**-1) * disk.mstar
+    disk.rc = log_uniform_sample(rng.random(), 20, 230) * c.au
+    disk.vfrag = map_uniform_to_interval(rng.random(), 300, 1500)
+    disk.rp = max(r_min, map_uniform_to_interval(rng.random(),0.05,0.75)*disk.rc) # ensure rp is at least 4 au
+    disk.mp = min(map_uniform_to_interval(rng.random(),150,1050)*c.M_earth,disk.mdisk)
+    disk.tp = map_uniform_to_interval(rng.random(),0.01,0.1)*1e6*c.year
+    disk.d2g = 1e-2 
+    disk.rhos = 1.7 
+    disk.gamma = 1 
+    # Emsenhuber 2023 Table 6
+    disk.Lx = 10** rng.normal(loc=0.31, scale=0.54, size=1)[0] * (disk.mstar/c.M_sun)**1.52 * 1e30 # erg/s
+    #changed Feux to be in line with anania 2025 results for taurus and lupus
+    disk.Feux = 10 ** max(-1, rng.normal(loc=np.log10(3.5), scale=0.5, size=1)[0])  #G0 Weder 
+    return disk
+
 
 
 def disk_extended(n,size = 8,random_seed = 42):

@@ -173,10 +173,72 @@ def read_rosotti_data(fname):
             T_star[idx] = dset[f'time_{idx}/yso_0/Star/teff'][()]
 
         return rosotti_result(amax, age, T, sig_d, sig_g, d2g, r, L_star, M_star, T_star)
+    
+def read_tazzari_distances(fname=None):
+    if fname is None:
+        fname = Path(__file__).parent / "datasets/Tazzari2021_distances.txt"
 
-def read_tazzari_data(fname=None):
+    with open(fname, "r") as f:
+        lines = f.readlines()
+
+    # Header line with column names starts with "|" and contains field names.
+    header_line = lines[9].strip()
+    columns = [col.strip() for col in header_line.split("|") if col.strip()]
+
+    data = []
+    for line in lines[13:]:
+        if not line.strip():
+            continue
+
+        # First two columns are fixed-width (22 chars each).
+        name = line[:22].strip()
+        other_name = line[22:44].strip()
+        rest = line[44:].strip().split()
+
+        # Expected tail: RA Dec id_2MASS [id_GaiaDR2] d MStar [Notes]
+        if len(rest) < 5:
+            continue
+
+        ra = rest[0]
+        dec = rest[1]
+        id_2mass = rest[2]
+        tail = rest[3:]
+
+        id_gaia = ""
+        d_val = np.nan
+        mstar = np.nan
+        notes = ""
+
+        # Gaia ID is a long integer token when present.
+        if tail and tail[0].isdigit() and len(tail[0]) >= 10:
+            id_gaia = tail[0]
+            if len(tail) > 1:
+                d_val = tail[1]
+            if len(tail) > 2:
+                mstar = tail[2]
+            if len(tail) > 3:
+                notes = tail[3]
+        else:
+            if len(tail) > 0:
+                d_val = tail[0]
+            if len(tail) > 1:
+                mstar = tail[1]
+            if len(tail) > 2:
+                notes = tail[2]
+
+        data.append([name, other_name, ra, dec, id_2mass, id_gaia, d_val, mstar, notes])
+
+    df = pd.DataFrame(data, columns=columns)
+    df["d"] = pd.to_numeric(df["d"], errors="coerce")
+    df["MStar"] = pd.to_numeric(df["MStar"], errors="coerce")
+
+    return df
+
+def read_tazzari_data(fname=None,fname_dist=None):
     if fname is None:
         fname = Path(__file__).parent / "datasets/Tazzari2021.txt"
+    if fname_dist is None:
+        fname_dist = Path(__file__).parent / "datasets/Tazzari2021_distances.txt"
     with open(fname, 'r') as f:
         lines = f.readlines()
     
@@ -210,6 +272,8 @@ def read_tazzari_data(fname=None):
     df = pd.DataFrame(data, columns=columns)
     for col in df.columns[2:]:
         df[col] = pd.to_numeric(df[col])
+    df_dist = read_tazzari_distances(fname_dist)
+    df["d"] = df_dist["d"]
     
     return df
 
@@ -265,6 +329,9 @@ def read_andrews_data(fname=None):
     dat.columns = [f'col{i+1}' for i in range(dat.shape[1])]
     ndisks = len(dat)
 
+    source_id   = dat['col1'].to_numpy()
+    source_name = dat['col2'].to_numpy()
+
     xx = dat['col30'].to_numpy()
     xh = dat['col31'].to_numpy()
     xl = dat['col32'].to_numpy()
@@ -282,6 +349,8 @@ def read_andrews_data(fname=None):
     cond = y_f == 0
 
     df = pd.DataFrame({
+        'source_id':   source_id[cond],
+        'source_name': source_name[cond],
         'R_eff':   10.**yy[cond],
         'R_eff_l': (10.**yy - 10.**(yy - yl))[cond],
         'R_eff_h': (10.**(yy + yh) - 10.**yy)[cond],
