@@ -21,7 +21,8 @@ from .dipsy_functions import \
     read_tazzari_data, \
     read_andrews_data, \
     read_bito_data, \
-    read_feng_data
+    read_feng_data, \
+    read_ricciardi_data
 
 __all__ = [
     'data',

@@ -278,7 +278,21 @@ def read_tazzari_data(fname=None,fname_dist=None):
     return df
 
 
-def read_feng_data(fname=None):
+def read_ricciardi_data(fname=None):
+    if fname is None:
+        fname = Path(__file__).parent / "datasets/Ricciardi_2026.csv"
+    df = pd.read_csv(fname, sep=',', comment='#')
+    return df
+
+
+def read_feng_data(fname=None, ricciardi=False, fname_ricciardi=None):
+    """
+    Read the Feng 2022 table. If `ricciardi` is True, the faint Lupus disks
+    of Ricciardi 2026 are appended: their R90 dust/CO radii go into
+    `CO_val`/`CO_flux_mJy` (asymmetric errors are averaged), fields not in
+    that table are left NaN, and the columns `Dataset`, `R_CO_uplim` and
+    `R_CO_over_R_mm_uplim` are added to flag the source and upper limits.
+    """
     if fname is None:
         fname = Path(__file__).parent / "datasets/feng_22.csv"
     with open(fname, 'r') as f:
@@ -316,6 +330,32 @@ def read_feng_data(fname=None):
     for col in ['Idx', 'Incl', 'PA', 'Continuum_freq_GHz',
                 'Continuum_flux_mJy', 'R_mm_arcsec']:
         df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    if ricciardi:
+        df_ric = read_ricciardi_data(fname_ricciardi)
+
+        def mean_err(col):
+            return 0.5 * (df_ric[col + '_err_plus'] + df_ric[col + '_err_minus'])
+
+        df_add = pd.DataFrame({
+            'Name': df_ric['Source'],
+            'Incl': df_ric['incl_deg'],
+            'PA': df_ric['PA_deg'],
+            'CO_val': df_ric['R90_dust_au'],
+            'CO_val_err': mean_err('R90_dust_au'),
+            'CO_flux_mJy': df_ric['R90_CO_au'],
+            'CO_flux_mJy_err': mean_err('R90_CO_au'),
+            'R_CO_over_R_mm': df_ric['RCO_Rdust'],
+            'R_CO_over_R_mm_err': mean_err('RCO_Rdust'),
+            'R_CO_uplim': df_ric['R90_CO_au_uplim'],
+            'R_CO_over_R_mm_uplim': df_ric['RCO_Rdust_uplim'],
+            'Dataset': 'Ricciardi26',
+        })
+
+        df['Dataset'] = 'Feng22'
+        df['R_CO_uplim'] = False
+        df['R_CO_over_R_mm_uplim'] = False
+        df = pd.concat([df, df_add], ignore_index=True)
 
     return df
 

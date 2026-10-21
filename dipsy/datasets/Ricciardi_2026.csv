@@ -1,0 +1,21 @@
+# Ricciardi et al. (2026): fluxes, radii and geometry of faint Lupus disks
+# Method: stacked = shift-and-stacked line emission; integrated_map = flux from integrated intensity maps
+# *_uplim = True means the value is an upper limit (no errors given)
+Source,Method,F_12CO_mJy_kms,F_12CO_mJy_kms_err_plus,F_12CO_mJy_kms_err_minus,F_12CO_mJy_kms_uplim,F_13CO_mJy_kms,F_13CO_mJy_kms_err_plus,F_13CO_mJy_kms_err_minus,F_13CO_mJy_kms_uplim,R68_CO_au,R68_CO_au_err_plus,R68_CO_au_err_minus,R68_CO_au_uplim,R90_CO_au,R90_CO_au_err_plus,R90_CO_au_err_minus,R90_CO_au_uplim,R68_dust_au,R68_dust_au_err_plus,R68_dust_au_err_minus,R68_dust_au_uplim,R90_dust_au,R90_dust_au_err_plus,R90_dust_au_err_minus,R90_dust_au_uplim,RCO_Rdust,RCO_Rdust_err_plus,RCO_Rdust_err_minus,RCO_Rdust_uplim,incl_deg,PA_deg
+Sz131,stacked,2442.28,353.72,353.72,False,1688.48,356.13,356.13,False,40.9,4.9,4.9,False,58.1,6.9,6.9,False,18.82,1.93,1.61,False,26.82,2.72,2.25,False,2.17,0.48,0.43,False,47.28,335.0
+J16081497-3857145,stacked,1689.51,294.97,294.97,False,1144.10,347.47,347.47,False,44.5,7.6,7.6,False,63.2,10.79,10.79,False,17.81,2.41,1.66,False,25.33,3.47,2.41,False,2.49,0.73,0.67,False,58.24,80.13
+J16085324-3914401,stacked,2863.89,385.07,385.07,False,2166.74,404.15,404.15,False,28.7,6.7,6.7,False,40.7,9.5,9.5,False,18.09,0.82,0.82,False,25.75,1.30,1.14,False,1.58,0.46,0.43,False,33.0,100.18
+Sz72,stacked,2694.85,169.94,169.94,False,1710.48,181.30,181.30,False,26.3,1.9,1.9,False,37.34,2.7,2.7,False,11.56,0.64,0.48,False,16.55,0.96,0.80,False,2.26,0.29,0.28,False,31.46,217.99
+Sz103,stacked,1405.71,205.22,205.22,False,863.26,204.22,204.22,False,15.9,3.6,3.6,False,22.6,5.1,5.1,False,13.05,0.63,0.63,False,18.56,0.94,0.79,False,1.22,0.34,0.32,False,51.13,260.87
+Sz97,stacked,1215.64,236.30,236.30,False,718.39,,,True,12.7,6.7,6.7,False,18.0,9.5,9.5,False,5.66,2.99,2.05,False,8.03,4.25,2.83,False,2.24,3.04,1.05,False,45.0,61.13
+Sz117,stacked,942.24,234.66,234.66,False,697.55,211.56,211.56,False,19.1,13.2,13.2,False,27.1,18.7,18.7,False,7.85,0.94,0.78,False,11.13,1.26,1.10,False,2.43,2.13,1.76,False,40.05,95.22
+Sz113,stacked,3423.67,285.09,285.09,False,1983.61,320.72,320.72,False,19.2,4.5,4.5,False,27.3,6.4,6.4,False,12.53,0.32,0.32,False,17.66,0.48,0.48,False,1.55,0.42,0.39,False,5.0,116.43
+J16134410-3736462,integrated_map,5.60,,,True,11.56,,,True,16.48,,,True,23.40,,,True,15.32,0.01,0.32,False,19.13,0.02,0.16,False,1.08,,,True,49.40,69.90
+J16000060-4221567,integrated_map,37.75,6.14,6.14,False,8.75,,,True,14.70,,,True,20.87,,,True,10.52,5.99,3.55,False,15.00,5.89,4.78,False,1.4,,,True,65.7,86.95
+J16085529-3848481,integrated_map,15.94,,,True,7.87,,,True,19.44,,,True,27.61,,,True,16.49,0.93,3.07,False,26.76,0.31,5.89,False,1.18,,,True,68.0,88.3
+J16002612-4153553,integrated_map,18.27,4.11,4.11,False,7.81,,,True,33.7,15.2,15.2,False,47.9,21.6,21.6,False,12.07,0.33,0.49,False,15.65,0.16,0.65,False,3.06,1.57,1.39,False,53.11,167.56
+Sz106,integrated_map,0.01,,,True,0.09,,,True,19.81,,,True,28.13,,,True,19.04,5.71,3.65,False,26.98,8.25,5.08,False,1.04,,,True,81.31,78.7
+Sz104,integrated_map,20.78,5.17,5.17,False,20.65,5.43,5.43,False,13.9,,,True,19.74,,,True,8.79,4.79,2.24,False,12.65,6.72,3.20,False,1.58,,,True,31.0,66.1
+Sz112,integrated_map,25.42,4.24,4.24,False,14.19,,,True,28.3,9.2,9.2,False,40.2,13.0,13.0,False,10.51,2.07,2.07,False,14.98,2.87,2.87,False,2.68,1.71,1.16,False,31.46,47.89
+J16095628-3859518,integrated_map,126.96,15.37,15.37,False,24.12,6.60,6.60,False,21.3,4.0,4.0,False,30.2,5.7,5.7,False,8.48,1.41,1.10,False,12.10,2.36,1.41,False,2.50,0.86,0.80,False,30.0,87.93
+Sz110,integrated_map,215.25,11.91,11.91,False,61.48,6.49,6.49,False,12.5,5.1,5.1,False,17.8,7.2,7.2,False,14.49,0.47,0.47,False,20.65,0.63,0.63,False,0.86,0.39,0.36,False,49.55,13.10
